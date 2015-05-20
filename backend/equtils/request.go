@@ -16,7 +16,7 @@
 package equtils
 
 import (
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"encoding/binary"
 )
 

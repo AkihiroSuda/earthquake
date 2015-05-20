@@ -5,15 +5,16 @@ BUILDROOT=`pwd`
 export GOPATH=$BUILDROOT/gopath
 export GOBIN=$GOPATH/bin
 
-REPO_PATH=$BUILDROOT/earthquake
+REPO_PATH=$BUILDROOT/backend
 
-go get -u code.google.com/p/goprotobuf/protoc-gen-go
+go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
 go get github.com/sevlyar/go-daemon
 
-EQUTILS_PATH=$BUILDROOT/earthquake/equtils
+EQUTILS_PATH=$BUILDROOT/backend/equtils
 protoc --go_out=$EQUTILS_PATH -I$EQUTILS_PATH $EQUTILS_PATH/*.proto
 protoc --go_out=$EQUTILS_PATH -I$BUILDROOT/inspector $BUILDROOT/inspector/*.proto
 
-pushd earthquake
+pushd backend
 go build
+mv backend earthquake-backend
 popd

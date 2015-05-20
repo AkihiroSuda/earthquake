@@ -1,0 +1,24 @@
+{
+    "GlobalFlags": {
+        "Orchestrator": {
+            "FrontendListenPort": 10000,
+            "BackendListenPort": 10042
+        },
+        "Explorer": {
+            "Policy": "Dumb",
+            "Directory": "/tmp/dumb01",
+            "Timeslice": 30
+        }
+    },
+    "Processes": [
+        {
+            "id": "zk1"
+        },
+        {
+            "id": "zk2"
+        },
+        {
+            "id": "zk3"
+        }
+    ]
+}

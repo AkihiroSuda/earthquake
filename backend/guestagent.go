@@ -17,7 +17,7 @@ package main
 
 import (
 	. "./equtils"
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"fmt"
 	"github.com/sevlyar/go-daemon"
 	"net"
