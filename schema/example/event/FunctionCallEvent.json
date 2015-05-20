@@ -1,0 +1,13 @@
+{
+    "type": "event",
+    "class": "FunctionCallEvent",
+    "process": "zksrv1",
+    "session_id": "062d408a-dff0-466f-8e2e-8c1672ba0a6f",
+    "uuid": "1f13eaa6-4b92-45f0-a4de-1236081dc649",
+    "deferred": true,
+    "option": {
+        "func_name": "org.example.func001",
+        "i": 42,
+        "str": "hello"
+    }
+}
