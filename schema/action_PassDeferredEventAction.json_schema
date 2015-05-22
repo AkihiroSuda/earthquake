@@ -7,7 +7,6 @@
 	"class",
 	"option",
 	"process",
-	"session_id",
 	"type",
 	"uuid"
     ],
@@ -25,9 +24,6 @@
 	    }
 	},
 	"process": {
-	    "type": "string"
-	},
-	"session_id": {
 	    "type": "string"
 	},
 	"type": {

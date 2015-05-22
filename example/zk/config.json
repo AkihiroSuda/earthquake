@@ -1,24 +1,23 @@
 {
-    "GlobalFlags": {
-        "Orchestrator": {
-            "FrontendListenPort": 10000,
-            "BackendListenPort": 10042
-        },
-        "Explorer": {
-            "Policy": "Dumb",
-            "Directory": "/tmp/dumb01",
-            "Timeslice": 30
+    "globalFlags": {
+        "orchestrator": {
+            "listenTCPPort": 10000,
+            "search": {
+                "policy": "Dumb",
+                "directory": "\/tmp\/dumb01",
+                "timeSlice": 0
+            }
         }
     },
-    "Processes": [
+    "processes": [
         {
-            "id": "zk1"
+            "id": "zksrv1"
         },
         {
-            "id": "zk2"
+            "id": "zksrv2"
         },
         {
-            "id": "zk3"
+            "id": "zksrv3"
         }
     ]
 }

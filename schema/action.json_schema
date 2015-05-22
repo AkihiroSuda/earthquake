@@ -6,7 +6,6 @@
     "required": [
 	"class",
 	"process",
-	"session_id",
 	"type",
 	"uuid"
     ],
@@ -15,9 +14,6 @@
 	"option": {
 	},
 	"process": {
-	    "type": "string"
-	},
-	"session_id": {
 	    "type": "string"
 	},
 	"type": {

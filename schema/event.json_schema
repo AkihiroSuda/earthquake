@@ -7,7 +7,6 @@
 	"class",
 	"deferred",
 	"process",
-	"session_id",
 	"type",
 	"uuid"
     ],
@@ -17,9 +16,6 @@
 	    "type": "string"
 	},
 	"process": {
-	    "type": "string"
-	},
-	"session_id": {
 	    "type": "string"
 	},
 	"deferred": {
