@@ -84,6 +84,9 @@ class EntityBase(object):
             return klazz
         return f
 
+    def digest(self):    
+        return (self.__class__.__name__,  self.option)
+
             
 @six.add_metaclass(ABCMeta)
 class EventBase(EntityBase):
@@ -107,5 +110,8 @@ class ActionBase(EntityBase):
     Action: Target System <-- Orchestrator
     """
     type_name = 'action'
-    
+
+    def call(self, orchestrator):
+        orchestrator.send_action(self)
+
 action_class = ActionBase.deco

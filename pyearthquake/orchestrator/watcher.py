@@ -10,17 +10,14 @@ from ..entity import *
 from ..entity.event import *
 from ..entity.action import *
 from ..util import *
-from .event_callback import *
+from .digestible import *
 
 LOG = _LOG.getChild('orchestrator.watcher')
 
 @six.add_metaclass(ABCMeta)
 class WatcherBase(object):
-    def __init__(self):
-        self.oc = None
-
-    def set_orchestrator(self, oc):
-        self.oc = oc
+    def __init__(self, orchestrator):
+        self.oc = orchestrator
 
     @abstractmethod
     def handles(self, event):
@@ -29,7 +26,7 @@ class WatcherBase(object):
     @abstractmethod
     def on_event(self, state, event):
         """
-        returns list of EC
+        returns list of Digestible pair
         """
         pass
 
@@ -48,34 +45,35 @@ class DefaultWatcher(WatcherBase):
 
     def on_event(self, state, event):
         if event.deferred:
-            LOG.warn('DefaultWatcher passing %s', event)
+            LOG.warn('DefaultWatcher passing %s immediately. the event is not passed to the explorer', event)
             action = PassDeferredEventAction.from_event(event)
-            self.oc.send_action(action)
+            self.oc.call_action(action)
         else:
             LOG.warn('DefaultWatcher ignoring %s', event)
         return []
 
 
 
-class ProcessWatcher(WatcherBase):
+class BasicProcessWatcher(WatcherBase):
 
-    def __init__(self, process_id):
-        super(ProcessWatcher, self).__init__()
+    def __init__(self, orchestrator, process_id):
+        super(BasicProcessWatcher, self).__init__(orchestrator)
         self.process = process_id
 
     def handles(self, event):
         return event.process == self.process
 
     def on_event(self, state, event):
-        ecs = []
-        ## TODO: move the logic to somewhere else
-        if isinstance(event, PacketEvent):
-            ecs.append(PacketEventCallback(event))
-        elif isinstance(event, FunctionCallEvent):
-            ecs.append(FunctionCallEventCallback(event))            
-        else:
-            raise RuntimeError('Unknown event %s' % event)
-        return ecs
+        pairs = []
+        if event.deferred:
+            action = PassDeferredEventAction.from_event(event)
+            pair = self.oc.make_digestible_pair(event, action)
+            pairs.append(pair)
+        # you can override this to add ExecuteCommandActions.        
+        return pairs
 
+    def on_terminal_state(self, terminal_state):
+        LOG.info('Process %s: terminated', self.process)
+        
     def on_reset(self):
-        LOG.info('Please restart process %s manually', self.process)
+        LOG.info('Process %s: please restart me manually', self.process)

@@ -21,7 +21,7 @@ from ..util import *
 
 from .state import *
 from .watcher import *
-from .event_callback import *
+from .digestible import *
 
 LOG = _LOG.getChild('orchestrator.explorer')
 
@@ -51,13 +51,13 @@ class Graph(object):
         # LOG.debug('Visit state %s, count=%d->%d', state, count, count+1)
         self._g.add_node(state, count=count+1)
         
-    def visit_edge(self, state, next_state, ec):
+    def visit_edge(self, state, next_state, digestible):
         assert isinstance(state, StateBase)
         assert isinstance(next_state, StateBase)
-        assert isinstance(ec, EventCallbackBase)
+        assert isinstance(digestible, DigestibleBase)
         self.visit_node(state)
         self.visit_node(next_state)
-        self._g.add_edge(state, next_state, ec=ec)
+        self._g.add_edge(state, next_state, digestible=digestible)
         # self._print_nodes()
 
 
@@ -69,7 +69,6 @@ class ExplorerBase(object):
         self.oc = None
         self.state = None
         self.initial_state = None
-        self.watchers = []
         self.visited_terminal_states = {} #key: state, value: count
 
     def set_orchestrator(self, oc, initial_state):
@@ -81,10 +80,6 @@ class ExplorerBase(object):
                   colorama.Style.RESET_ALL, self.state)
         self.graph = Graph(self.state)
 
-    def regist_watcher(self, w):
-        ## NOTE: this makes circular references (Orchestrator->Explorer->Watcher->Orchestrator->..)
-        w.set_orchestrator(self.oc)
-        self.watchers.append(w)
 
     def send_event(self, event):
         assert isinstance(event, EventBase)
@@ -106,79 +101,79 @@ class ExplorerBase(object):
         return events
 
 
-    def _worker__print_events_and_callbacks(self, ecs, new_events, new_ecs):
-        if ecs:
-            LOG.debug('Before state %s, the following OLD %d callbacks had been yielded', self.state, len(ecs))
-            for ec in ecs: LOG.debug('* %s', ec)
+    def _worker__print_events_and_callbacks(self, digestibles, new_events, new_digestibles):
+        if digestibles:
+            LOG.debug('Before state %s, the following OLD %d callbacks had been yielded', self.state, len(digestibles))
+            for digestible in digestibles: LOG.debug('* %s', digestible)
         LOG.debug('In state %s, the following %d events happend', self.state, len(new_events))
         for e in new_events:
             try: LOG.debug('* %f: %s', e.recv_timestamp, e.abstract_msg)
             except Exception: LOG.debug('* %s', e)
-        LOG.debug('In state %s, the following NEW %d callbacks were yielded for the above %d events', self.state, len(new_ecs), len(new_events))
-        for new_ec in new_ecs: LOG.debug('* %s', new_ec)
+        LOG.debug('In state %s, the following NEW %d callbacks were yielded for the above %d events', self.state, len(new_digestibles), len(new_events))
+        for new_digestible in new_digestibles: LOG.debug('* %s', new_digestible)
             
     def worker(self):
-        ecs = []
+        digestibles = []
         while True:
             if self.state.is_terminal_state(): self.state = self.on_terminal_state()
             new_events = self.recv_events(timeout_msecs=self.oc.time_slice)
-            if not new_events and not ecs: continue
+            if not new_events and not digestibles: continue
 
-            new_ecs = []
+            new_digestibles = []
             for e in new_events:
                 e_handled = False
-                for w in self.watchers:
-                    if w.handles(e): new_ecs.extend(w.on_event(self.state, e)); e_handled = True
-                if not e_handled: new_ecs.extend(self.oc.default_watcher.on_event(self.state, e))
-            self._worker__print_events_and_callbacks(ecs, new_events, new_ecs)
-            ecs.extend(new_ecs)
-            if not ecs: LOG.warn('No EC, THIS MIGHT CAUSE FALSE DEADLOCK, state=%s', self.state)
+                for w in self.oc.watchers:
+                    if w.handles(e): new_digestibles.extend(w.on_event(self.state, e)); e_handled = True
+                if not e_handled: new_digestibles.extend(self.oc.default_watcher.on_event(self.state, e))
+            self._worker__print_events_and_callbacks(digestibles, new_events, new_digestibles)
+            digestibles.extend(new_digestibles)
+            if not digestibles: LOG.warn('No DIGESTIBLE, THIS MIGHT CAUSE FALSE DEADLOCK, state=%s', self.state)
 
-            next_state, ecs = self.do_it(ecs)
-            if not ecs: LOG.warn('No EC, THIS MIGHT CAUSE FALSE DEADLOCK, next_state=%s', next_state)
+            next_state, digestibles = self.do_it(digestibles)
+            if not digestibles: LOG.warn('No DIGESTIBLE, THIS MIGHT CAUSE FALSE DEADLOCK, next_state=%s', next_state)
 
             LOG.debug('transit from %s to %s', self.state, next_state)
             self.state = next_state
 
-    def do_it(self, ecs):
+    def do_it(self, digestibles):
         """
-        select a ec from ecs and do it in the state.
-        returns: (next_state, other_ecs)
+        select a digestible from digestibles and do it in the state.
+        returns: (next_state, other_digestibles)
         FIXME: rename me!
         """
-        if not ecs: return self.state, []
-        chosen_ec = self.choose_ec(ecs)
-        assert(any(ec.event.uuid == chosen_ec.event.uuid for ec in ecs))
-        ecs.remove(chosen_ec)
-        other_ecs = ecs
+        if not digestibles: return self.state, []
+        chosen_digestible = self.choose_digestible(digestibles)
+        assert(any(digestible.event.uuid == chosen_digestible.event.uuid for digestible in digestibles))
+        digestibles.remove(chosen_digestible)
+        other_digestibles = digestibles
 
-        if chosen_ec:
-            next_state = self.do_transition(chosen_ec)
+        if chosen_digestible:
+            next_state = self.do_transition(chosen_digestible)
         else:
-            LOG.warn('No EC chosen, THIS MIGHT CAUSE FALSE DEADLOCK, state=%s', self.state)
+            LOG.warn('No DIGESTIBLE chosen, THIS MIGHT CAUSE FALSE DEADLOCK, state=%s', self.state)
             next_state = self.state
         
-        ## NOTE: as other ecs are also enabled in the NEXT state, we return other ecs here.
-        ## the worker will handle other ecs in the next round.
-        return next_state, other_ecs
+        ## NOTE: as other digestibles are also enabled in the NEXT state, we return other digestibles here.
+        ## the worker will handle other digestibles in the next round.
+        return next_state, other_digestibles
 
     @abstractmethod
-    def choose_ec(self, ecs):
+    def choose_digestible(self, digestibles):
         pass
 
-    def do_transition(self, ec):
-        assert isinstance(ec, EventCallbackBase)
+    def do_transition(self, digestible):
+        assert isinstance(digestible, DigestibleBase)
         LOG.debug(colorama.Back.CYAN +
-                  'Invoking the callback at state=%s, ec=%s' +
-                  colorama.Style.RESET_ALL, self.state, ec)
-        ec(orchestrator=self.oc)
+                  'Invoking the callback at state=%s, digestible=%s' +
+                  colorama.Style.RESET_ALL, self.state, digestible)
+        self.oc.call_action(digestible.action)
         next_state = self.state.make_copy()
-        next_state.append_event_callback(ec)
+        next_state.append_digestible(digestible)
         LOG.debug(colorama.Back.CYAN +
                   'State Transition: %s->%s' +
                   colorama.Style.RESET_ALL, self.state, next_state)        
 
-        self.graph.visit_edge(self.state, next_state, ec)
+        self.graph.visit_edge(self.state, next_state, digestible)
         ## NOTE: worker sets self.state to next_state
         return next_state
 
@@ -214,53 +209,53 @@ class ExplorerBase(object):
         self.visited_terminal_states[self.state] += 1
 
         ## notify termination to watchers
-        for w in self.watchers: w.on_terminal_state(self.state)
+        for w in self.oc.watchers: w.on_terminal_state(self.state)
 
         ## Reset
         next_state = self.initial_state.make_copy()        
         LOG.debug('Reset to %s', next_state)
         ## notify reset to watchers
-        for w in self.watchers: w.on_reset()
+        for w in self.oc.watchers: w.on_reset()
         return next_state
         
 
 
 class RandomExplorer(ExplorerBase):
-    def choose_ec(self, ecs):
-        assert (ecs)
-        r = random.randint(0, len(ecs)-1)
-        chosen_ec = ecs[r]
-        return chosen_ec
+    def choose_digestible(self, digestibles):
+        assert (digestibles)
+        r = random.randint(0, len(digestibles)-1)
+        chosen_digestible = digestibles[r]
+        return chosen_digestible
 
 
 class DumbExplorer(ExplorerBase):        
-    def choose_ec(self, ecs):
-        assert (ecs)
-        return ecs[0]
+    def choose_digestible(self, digestibles):
+        assert (digestibles)
+        return digestibles[0]
 
 
 from networkx.algorithms.traversal.depth_first_search import dfs_tree
 class GreedyExplorer(ExplorerBase):
-    def get_subtrees(self, ecs):
+    def get_subtrees(self, digestibles):
         d = {}        
-        frontier_ecs = list(ecs) # this is a shallow copy
+        frontier_digestibles = list(digestibles) # this is a shallow copy
         g = self.graph._g ## FIXME: should not access others' private vars  
         assert self.state in g.edge        
         for next_state in g.edge[self.state]:
-            ## NOTE: even if ec==edge_ec, event_uuid can differ. Do NOT return edge_ec.
-            edge_ec = g.edge[self.state][next_state]['ec']
-            ecs_matched = [ec for ec in ecs if ec == edge_ec]
-            if not ecs_matched: continue
-            ec = ecs_matched[0]
-            frontier_ecs.remove(ec)
+            ## NOTE: even if digestible==edge_digestible, event_uuid can differ. Do NOT return edge_digestible.
+            edge_digestible = g.edge[self.state][next_state]['digestible']
+            digestibles_matched = [digestible for digestible in digestibles if digestible == edge_digestible]
+            if not digestibles_matched: continue
+            digestible = digestibles_matched[0]
+            frontier_digestibles.remove(digestible)
             subtree = dfs_tree(g, next_state)
-            d[ec] = subtree
-        for ec in frontier_ecs:
-            d[ec] = None
+            d[digestible] = subtree
+        for digestible in frontier_digestibles:
+            d[digestible] = None
         return d
 
-    def evaluate_ec_subtree(self, ec, subtree):
-        assert(ec) # subtree may be None
+    def evaluate_digestible_subtree(self, digestible, subtree):
+        assert(digestible) # subtree may be None
         if not subtree: 
             metric = 1.0
         else:
@@ -270,12 +265,12 @@ class GreedyExplorer(ExplorerBase):
         metric *= rand_factor
         return metric
     
-    def choose_ec(self, ecs):
-        assert (ecs)        
-        ec_metrics = {}
-        for ec, subtree in self.get_subtrees(ecs).items():
-            metric = self.evaluate_ec_subtree(ec, subtree)
-            LOG.debug('Evaluated: metric=%f, ec=%s', metric, ec)
-            ec_metrics[ec] = metric
-        chosen_ec = max(ec_metrics, key=ec_metrics.get)
-        return chosen_ec
+    def choose_digestible(self, digestibles):
+        assert (digestibles)        
+        digestible_metrics = {}
+        for digestible, subtree in self.get_subtrees(digestibles).items():
+            metric = self.evaluate_digestible_subtree(digestible, subtree)
+            LOG.debug('Evaluated: metric=%f, digestible=%s', metric, digestible)
+            digestible_metrics[digestible] = metric
+        chosen_digestible = max(digestible_metrics, key=digestible_metrics.get)
+        return chosen_digestible
