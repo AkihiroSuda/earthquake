@@ -16,9 +16,12 @@ LOG = _LOG.getChild('orchestrator.watcher')
 
 @six.add_metaclass(ABCMeta)
 class WatcherBase(object):
-    def __init__(self, orchestrator):
-        self.oc = orchestrator
+    def __init__(self):
+        pass
 
+    def init_with_orchestrator(self, orchestrator):
+        self.oc = orchestrator
+        
     @abstractmethod
     def handles(self, event):
         pass
@@ -55,9 +58,8 @@ class DefaultWatcher(WatcherBase):
 
 
 class BasicProcessWatcher(WatcherBase):
-
-    def __init__(self, orchestrator, process_id):
-        super(BasicProcessWatcher, self).__init__(orchestrator)
+    def init_with_process(self, orchestrator, process_id):
+        self.init_with_orchestrator(orchestrator)
         self.process = process_id
 
     def handles(self, event):

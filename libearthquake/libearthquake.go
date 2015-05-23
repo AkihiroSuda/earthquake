@@ -45,8 +45,7 @@ func EQInitCtx(configJsonCString *C.char) bool {
 	// if direct > 0 {
 	// 	Log("WARN: direct mode is deprecated, because you can use socat to connect between inside the VM and outside the VM")
 	// }
-	ocFlags := globalFlags["orchestrator"].(map[string]interface{})
-	searchFlags := ocFlags["search"].(map[string]interface{})
+	searchFlags := globalFlags["search"].(map[string]interface{})
 	searchDir := searchFlags["directory"].(string)
 	Log("searchDir: %s", searchDir)
 	libExe.searchDir = searchDir

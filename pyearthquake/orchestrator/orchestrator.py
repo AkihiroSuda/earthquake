@@ -17,57 +17,90 @@ import uuid
 from .. import LOG as _LOG
 from ..entity import *
 from ..entity.entity import *
-from .digestible import *
 from ..util import *
 
-from .explorer import *
+
+from .digestible import *
 from .state import *
 from .watcher import *
+from .detector import *
+from .explorer import *
 
 LOG = _LOG.getChild('orchestrator.orchestrator')
 
+## these imports are needed for eval(plugin_str)
+import pyearthquake
+import pyearthquake.orchestrator.orchestrator
+import pyearthquake.orchestrator.watcher
+import pyearthquake.orchestrator.detector
+import pyearthquake.orchestrator.explorer
 
 @six.add_metaclass(ABCMeta)
 class OrchestratorBase(object):
-    def __init__(self, config):
-        self._init_load_config(config)
-        self._init_load_libearthquake()        
-        self._init_regist_explorer()
-        self._init_regist_watchers()
+    def __init__(self):
+        """
+        orchestrator plugin class constructor
+        """
+        pass
+    
+    def init_with_config(self, config):
+        self.config = config
+        self._init_parse_config()
+        self._init_load_libearthquake()
+        self._init_load_process_watcher_plugin()
+        self._init_load_termination_detector_plugin()                
+        self._init_load_explorer_plugin()
         
-    def _init_load_config(self, config):
-        self.listen_port = int(config['globalFlags']['orchestrator']['listenTCPPort'])
-        self.time_slice = int(config['globalFlags']['orchestrator']['search']['timeSlice'])
-        # search policy is ignored right now (available: Dumb, Random, Greedy)
+    def _init_parse_config(self):
+        self.listen_port = int(self.config['globalFlags']['orchestratorListenPort'])
         self.processes = {}
-        for p in config['processes']:
+        for p in self.config['processes']:
             pid = p['id']
             queue = Queue()
             self.processes[pid] = { 'queue': queue }
-
-        LOG.info('Time Slice: %d', self.time_slice)
         LOG.info('Processes: %s', self.processes)
-        self.config = config
         
     def _init_load_libearthquake(self):
-        self.libearthquake = ctypes.CDLL('libearthquake.so')
+        dll_str = 'libearthquake.so'
+        LOG.info('Loading DLL "%s"', dll_str)        
+        self.libearthquake = ctypes.CDLL(dll_str)
+        LOG.info('Loaded DLL "%s"', self.libearthquake)        
         config_json_str = json.dumps(self.config)
-        self.libearthquake.EQInitCtx(config_json_str)
+        rc = self.libearthquake.EQInitCtx(config_json_str)
+        assert rc == 1
 
-    def _init_regist_explorer(self):
-        state = StateBase()
-        self.explorer = DumbExplorer()
-        LOG.info('Explorer: %s', self.explorer.__class__.__name__)        
-        self.explorer.set_orchestrator(self, initial_state=state)
-
-    def _init_regist_watchers(self):
+    def _init_load_process_watcher_plugin(self):
         self.watchers = []
-        self.default_watcher = DefaultWatcher(orchestrator=self)
+        self.default_watcher = DefaultWatcher()
+        self.default_watcher.init_with_orchestrator(orchestrator=self)
+        watcher_str = self.config['globalFlags']['plugin']['processWatcher']
+        LOG.info('Loading ProcessWatcher "%s"', watcher_str)
+        for p in self.processes:
+            watcher = eval(watcher_str)
+            assert isinstance(watcher, WatcherBase)
+            watcher.init_with_process(orchestrator=self, process_id=p)
+            LOG.info('Loaded ProcessWatcher %s for process %s', watcher, p)                        
+            self.watchers.append(watcher)
+        
+    def _init_load_explorer_plugin(self):
+        explorer_str = self.config['globalFlags']['plugin']['explorer']
+        LOG.info('Loading explorer "%s"', explorer_str)
+        self.explorer = eval(explorer_str)
+        assert isinstance(self.explorer, ExplorerBase)        
+        LOG.info('Loaded explorer %s', self.explorer)            
+        self.explorer.init_with_orchestrator(self, initial_state=BasicState())
 
+    def _init_load_termination_detector_plugin(self):
+        detector_str = self.config['globalFlags']['plugin']['terminationDetector']
+        LOG.info('Loading termination detector "%s"', detector_str)
+        self.termination_detector = eval(detector_str)
+        assert isinstance(self.termination_detector, TerminationDetectorBase)
+        LOG.info('Loaded termination detector %s', self.termination_detector)            
+        self.termination_detector.init_with_orchestrator(self)
         
     def start(self):
         explorer_worker_handle = eventlet.spawn(self.explorer.worker)
-        flask_app = Flask(__name__)
+        flask_app = Flask(self.__class__.__name__)
         flask_app.debug = True
         self.regist_flask_routes(flask_app)
         server_sock = eventlet.listen(('localhost', self.listen_port))
@@ -102,7 +135,9 @@ class OrchestratorBase(object):
             assert process_id in self.processes.keys(), 'unknown process %s. check the config.' % (process_id)
              
             ## wait for action from explorer
-            action = self.processes[process_id]['queue'].get()
+            got = self.processes[process_id]['queue'].get()
+            action = got['action']
+            assert isinstance(action, ActionBase)
 
             ## return action
             action_jsdict = action.to_jsondict()
@@ -114,11 +149,8 @@ class OrchestratorBase(object):
         explorer calls this
         """
         process_id = action.process
-        self.processes[process_id]['queue'].put(action)
+        self.processes[process_id]['queue'].put({'type': 'action', 'action': action})
         
-    def regist_watcher(self, w):
-        self.watchers.append(w)
-
     def execute_command(self, command):
         rc = subprocess.call(command, shell=True)
         return rc
@@ -139,13 +171,6 @@ class OrchestratorBase(object):
 
 
 class BasicOrchestrator(OrchestratorBase):
-
-    def _init_regist_watchers(self):
-        super(BasicOrchestrator, self)._init_regist_watchers()
-        # you can override BasicProcessWatchers to add ExecuteCommandActions on events
-        for p in self.processes:
-            self.regist_watcher(BasicProcessWatcher(orchestrator=self, process_id=p))
-    
     def call_action(self, action):
         assert isinstance(action, ActionBase)
         action.call(orchestrator=self)
@@ -153,22 +178,3 @@ class BasicOrchestrator(OrchestratorBase):
     def make_digestible_pair(self, event, action):
         digestible = BasicDigestible(event, action)
         return digestible
-
-
-
-def main():
-    """
-    orchestrator loader
-    """
-    assert len(sys.argv) > 1, "arg is required (config path)"
-    config_path = sys.argv[1]
-    config_file = open(config_path)
-    config_str = config_file.read()
-    config_file.close()
-    config = json.loads(config_str)
-    oc = BasicOrchestrator(config)
-    oc.start()
-    
-
-if __name__ == "__main__":
-    main()

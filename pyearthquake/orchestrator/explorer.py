@@ -69,9 +69,10 @@ class ExplorerBase(object):
         self.oc = None
         self.state = None
         self.initial_state = None
-        self.visited_terminal_states = {} #key: state, value: count
+        self.visited_terminal_states = {} #key: state, value: count (TODO: MOVE TO LIBEARTHQUAKE.SO)
+        self.time_slice = 0
 
-    def set_orchestrator(self, oc, initial_state):
+    def init_with_orchestrator(self, oc, initial_state):
         self.oc = oc
         self.initial_state = initial_state
         self.state = self.initial_state.make_copy()
@@ -115,8 +116,8 @@ class ExplorerBase(object):
     def worker(self):
         digestibles = []
         while True:
-            if self.state.is_terminal_state(): self.state = self.on_terminal_state()
-            new_events = self.recv_events(timeout_msecs=self.oc.time_slice)
+            if self.oc.termination_detector.is_terminal_state(self.state): self.state = self.on_terminal_state()
+            new_events = self.recv_events(timeout_msecs=self.time_slice)
             if not new_events and not digestibles: continue
 
             new_digestibles = []
@@ -192,7 +193,6 @@ class ExplorerBase(object):
                  past_all_states, new_all_states)
         
     def on_terminal_state(self):
-        assert self.state.is_terminal_state()
         LOG.debug(colorama.Back.RED +
                   '*** REACH TERMINAL STATE (%s) ***' +
                   colorama.Style.RESET_ALL, self.state)
@@ -221,6 +221,10 @@ class ExplorerBase(object):
 
 
 class RandomExplorer(ExplorerBase):
+    def __init__(self, time_slice):
+        super(RandomExplorer, self).__init__()
+        self.time_slice = time_slice
+        
     def choose_digestible(self, digestibles):
         assert (digestibles)
         r = random.randint(0, len(digestibles)-1)
@@ -236,6 +240,10 @@ class DumbExplorer(ExplorerBase):
 
 from networkx.algorithms.traversal.depth_first_search import dfs_tree
 class GreedyExplorer(ExplorerBase):
+    def __init__(self, time_slice):
+        super(GreedyExplorer, self).__init__()
+        self.time_slice = time_slice
+    
     def get_subtrees(self, digestibles):
         d = {}        
         frontier_digestibles = list(digestibles) # this is a shallow copy

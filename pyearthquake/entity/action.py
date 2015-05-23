@@ -47,6 +47,6 @@ class ExecuteCommandOnOrchestratorAction(ActionBase):
 
     def call(self, orchestrator):
         command = self.option['command']
-        LOG.debug('%s: execute command"%s"', __name__, command)
+        LOG.debug('%s: execute command"%s"', self.__class__.__name__, command)
         rc = orchestrator.execute_command(command)
-        LOG.debug('%s: return command="%s", rc=%d', __name__, command, rc)
+        LOG.debug('%s: return command="%s", rc=%d', self.__class__.__name__, command, rc)
