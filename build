@@ -4,3 +4,9 @@ pushd libearthquake
 ./build
 popd
 
+
+pushd inspector/java/base
+mvn package
+popd
+cp -f inspector/java/base/target/earthquake-inspector.jar ./bin/
+
