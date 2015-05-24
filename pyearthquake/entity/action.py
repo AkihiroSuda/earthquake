@@ -4,21 +4,20 @@ LOG = _LOG.getChild('entity.action')
 
 @action_class()
 class NopAction(ActionBase):
-    pass
+    @classmethod
+    def from_event(cls, event):
+        inst = cls()
+        inst.process = event.process
+        return inst
 
 @action_class()
 class PassDeferredEventAction(ActionBase):
     @classmethod
     def from_event(cls, event):
         assert event.deferred
-        inst = cls._from_event_uuid(event.uuid)
-        inst.process = event.process
-        return inst
-    
-    @classmethod
-    def _from_event_uuid(cls, event_uuid):
         inst = cls()
-        inst.option = {'event_uuid': event_uuid}        
+        inst.process = event.process
+        inst.option = {'event_uuid': event.uuid}                
         return inst
 
     def digest(self):    

@@ -27,3 +27,12 @@ class LogEvent(EventBase):
     syslog (not deferrable)
     """
     deferred = False
+
+
+@event_class()
+class InspectionEndEvent(EventBase):
+    """
+    Inspection end (not deferrable)
+    """
+    deferred = False
+    

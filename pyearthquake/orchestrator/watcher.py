@@ -69,8 +69,10 @@ class BasicProcessWatcher(WatcherBase):
         pairs = []
         if event.deferred:
             action = PassDeferredEventAction.from_event(event)
-            pair = self.oc.make_digestible_pair(event, action)
-            pairs.append(pair)
+        else:
+            action = NopAction.from_event(event)
+        pair = self.oc.make_digestible_pair(event, action)
+        pairs.append(pair)
         # you can override this to add ExecuteCommandActions.        
         # you can add safety checks (i.e., assertion) here
         return pairs

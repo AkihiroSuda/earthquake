@@ -15,13 +15,15 @@ Run experiments
 
     $ ./020-start-zk-ensemble.sh
     $ ./030-concurrent-write.sh
-    $ killall -9 java; rm -rf /tmp/eq/zk
+    $ ./040-inspection-end.json
+    $ ./041-kill-zk-ensemble.sh
 
     $ ./020-start-zk-ensemble.sh
     $ ./030-concurrent-write.sh
-    $ killall -9 java; rm -rf /tmp/eq/zk
+    $ ./040-inspection-end.json
+    $ ./041-kill-zk-ensemble.sh
 
-    # loop...
+    # loop as many times as you want...
 
 
 Get experimental result CSV
@@ -32,4 +34,6 @@ Get experimental result CSV
     5 2
     ..
     
-    
+
+## SEE ALSO
+example-output/README.md    

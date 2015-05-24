@@ -36,7 +36,24 @@ class IdleForWhileDetector(TerminationDetectorBase):
 
 class InspectionEndDetector(TerminationDetectorBase):
     """
-    detect termination when InspectionEndEvent observed
+    detect termination when InspectionEndEvent from all processes are observed
     """
     def is_terminal_state(self, state):
-        raise NotImplementedError
+        """
+        FIXME: make me light-weight
+        """
+        
+        process_ended = {}
+        for pid in self.oc.processes.keys():
+            process_ended[pid] = False
+
+        for d in state.digestible_sequence:
+            if isinstance(d.event, InspectionEndEvent):
+                pid = d.event.process
+                process_ended[pid] = True
+        
+        terminated = process_ended.values() == [True] * len(process_ended)
+
+        if terminated:
+            LOG.debug("%s detected terminated=%s", self.__class__.__name__, terminated)        
+        return terminated

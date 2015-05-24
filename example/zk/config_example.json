@@ -9,7 +9,7 @@
 	    "orchestrator": "pyearthquake.orchestrator.orchestrator.BasicOrchestrator()",
 	    "explorer": "pyearthquake.orchestrator.explorer.DumbExplorer()",
 	    "processWatcher": "pyearthquake.orchestrator.watcher.BasicProcessWatcher()",
-	    "terminationDetector": "pyearthquake.orchestrator.detector.IdleForWhileDetector(msecs=10000)"
+	    "terminationDetector": "pyearthquake.orchestrator.detector.InspectionEndDetector()"
 	}
     },
     "processes": [
@@ -21,6 +21,12 @@
         },
         {
             "id": "zksrv3"
+        },
+        {
+            "id": "zkcli1"
+        },
+        {
+            "id": "zkcli2"
         }
     ]
 }
