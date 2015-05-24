@@ -72,6 +72,7 @@ class BasicProcessWatcher(WatcherBase):
             pair = self.oc.make_digestible_pair(event, action)
             pairs.append(pair)
         # you can override this to add ExecuteCommandActions.        
+        # you can add safety checks (i.e., assertion) here
         return pairs
 
     def on_terminal_state(self, terminal_state):

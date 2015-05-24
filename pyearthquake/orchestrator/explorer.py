@@ -8,12 +8,12 @@ from eventlet.semaphore import Semaphore
 from eventlet.timeout import Timeout
 from eventlet.queue import *
 from greenlet import GreenletExit
-import matplotlib.pyplot
 import networkx as nx
 import six
 import time
 import random
 import uuid
+import json
 
 from .. import LOG as _LOG
 from ..entity import *
@@ -48,7 +48,7 @@ class Graph(object):
     def visit_node(self, state):
         assert isinstance(state, StateBase)
         count = self._g.node[state]['count'] if self._g.has_node(state) else 0
-        # LOG.debug('Visit state %s, count=%d->%d', state, count, count+1)
+        # LOG.debug('Visit state %s, count=%d->%d', state.to_short_str(), count, count+1)
         self._g.add_node(state, count=count+1)
         
     def visit_edge(self, state, next_state, digestible):
@@ -76,9 +76,9 @@ class ExplorerBase(object):
         self.oc = oc
         self.initial_state = initial_state
         self.state = self.initial_state.make_copy()
-        LOG.debug(colorama.Back.CYAN +
+        LOG.debug(colorama.Back.BLUE +
                   'set initial state=%s' +
-                  colorama.Style.RESET_ALL, self.state)
+                  colorama.Style.RESET_ALL, self.state.to_short_str())
         self.graph = Graph(self.state)
 
 
@@ -104,13 +104,13 @@ class ExplorerBase(object):
 
     def _worker__print_events_and_callbacks(self, digestibles, new_events, new_digestibles):
         if digestibles:
-            LOG.debug('Before state %s, the following OLD %d callbacks had been yielded', self.state, len(digestibles))
+            LOG.debug('Before state %s, the following OLD %d callbacks had been yielded', self.state.to_short_str(), len(digestibles))
             for digestible in digestibles: LOG.debug('* %s', digestible)
-        LOG.debug('In state %s, the following %d events happend', self.state, len(new_events))
+        LOG.debug('In state %s, the following %d events happend', self.state.to_short_str(), len(new_events))
         for e in new_events:
             try: LOG.debug('* %f: %s', e.recv_timestamp, e.abstract_msg)
             except Exception: LOG.debug('* %s', e)
-        LOG.debug('In state %s, the following NEW %d callbacks were yielded for the above %d events', self.state, len(new_digestibles), len(new_events))
+        LOG.debug('In state %s, the following NEW %d callbacks were yielded for the above %d events', self.state.to_short_str(), len(new_digestibles), len(new_events))
         for new_digestible in new_digestibles: LOG.debug('* %s', new_digestible)
             
     def worker(self):
@@ -128,12 +128,12 @@ class ExplorerBase(object):
                 if not e_handled: new_digestibles.extend(self.oc.default_watcher.on_event(self.state, e))
             self._worker__print_events_and_callbacks(digestibles, new_events, new_digestibles)
             digestibles.extend(new_digestibles)
-            if not digestibles: LOG.warn('No DIGESTIBLE, THIS MIGHT CAUSE FALSE DEADLOCK, state=%s', self.state)
+            if not digestibles: LOG.warn('No DIGESTIBLE, THIS MIGHT CAUSE FALSE DEADLOCK, state=%s', self.state.to_short_str())
 
             next_state, digestibles = self.do_it(digestibles)
-            if not digestibles: LOG.warn('No DIGESTIBLE, THIS MIGHT CAUSE FALSE DEADLOCK, next_state=%s', next_state)
+            if not digestibles: LOG.warn('No DIGESTIBLE, THIS MIGHT CAUSE FALSE DEADLOCK, next_state=%s', next_state.to_short_str())
 
-            LOG.debug('transit from %s to %s', self.state, next_state)
+            LOG.debug('transit from %s to %s', self.state.to_short_str(), next_state.to_short_str())
             self.state = next_state
 
     def do_it(self, digestibles):
@@ -151,7 +151,7 @@ class ExplorerBase(object):
         if chosen_digestible:
             next_state = self.do_transition(chosen_digestible)
         else:
-            LOG.warn('No DIGESTIBLE chosen, THIS MIGHT CAUSE FALSE DEADLOCK, state=%s', self.state)
+            LOG.warn('No DIGESTIBLE chosen, THIS MIGHT CAUSE FALSE DEADLOCK, state=%s', self.state.to_short_str())
             next_state = self.state
         
         ## NOTE: as other digestibles are also enabled in the NEXT state, we return other digestibles here.
@@ -164,21 +164,24 @@ class ExplorerBase(object):
 
     def do_transition(self, digestible):
         assert isinstance(digestible, DigestibleBase)
-        LOG.debug(colorama.Back.CYAN +
+        LOG.debug(colorama.Back.BLUE +
                   'Invoking the callback at state=%s, digestible=%s' +
-                  colorama.Style.RESET_ALL, self.state, digestible)
+                  colorama.Style.RESET_ALL, self.state.to_short_str(), digestible)
         self.oc.call_action(digestible.action)
         next_state = self.state.make_copy()
         next_state.append_digestible(digestible)
-        LOG.debug(colorama.Back.CYAN +
+        LOG.debug(colorama.Back.BLUE +
                   'State Transition: %s->%s' +
-                  colorama.Style.RESET_ALL, self.state, next_state)        
+                  colorama.Style.RESET_ALL, self.state.to_short_str(), next_state.to_short_str())        
 
         self.graph.visit_edge(self.state, next_state, digestible)
         ## NOTE: worker sets self.state to next_state
         return next_state
 
     def stat_on_terminal_state(self, past_all_states, past_visit_count, past_visit_count_sum):
+        """
+        TODO: move to LIBEARTHQUAKE.SO
+        """
         if past_visit_count == 0:
             banner = 'TERMINAL STATE(FRONTIER)'
             new_all_states = past_all_states + 1
@@ -187,17 +190,26 @@ class ExplorerBase(object):
             new_all_states = past_all_states
         LOG.info(colorama.Back.RED + '%s state %s, count=%d->%d, count_sum=%d->%d, all_states=%d->%d' + colorama.Style.RESET_ALL,
                  banner,
-                 self.state,
+                 self.state.to_short_str(),
                  past_visit_count, past_visit_count + 1,
                  past_visit_count_sum, past_visit_count_sum + 1,
                  past_all_states, new_all_states)
+
+    def regist_state_to_libeq(self):
+        json_dict = self.state.to_jsondict()
+        json_str = json.dumps(json_dict)
+        short_str = self.state.to_short_str()
+        rc = self.oc.libearthquake.EQRegistExecutionHistory_UnstableAPI(short_str, json_str)
+        assert rc == 0
         
     def on_terminal_state(self):
         LOG.debug(colorama.Back.RED +
                   '*** REACH TERMINAL STATE (%s) ***' +
-                  colorama.Style.RESET_ALL, self.state)
+                  colorama.Style.RESET_ALL, self.state.to_short_str())
 
-        ## make stat
+        self.regist_state_to_libeq()
+        
+        ## make stat (TODO: move to LIBEARTHQUAKE.SO)
         all_states = len(self.visited_terminal_states)
         visit_count_sum = sum(self.visited_terminal_states.values())
         if self.state in self.visited_terminal_states:
@@ -213,7 +225,7 @@ class ExplorerBase(object):
 
         ## Reset
         next_state = self.initial_state.make_copy()        
-        LOG.debug('Reset to %s', next_state)
+        LOG.debug('Reset to %s', next_state.to_short_str())
         ## notify reset to watchers
         for w in self.oc.watchers: w.on_reset()
         return next_state

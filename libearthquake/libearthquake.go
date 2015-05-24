@@ -19,26 +19,38 @@ import (
 	"C"
 	. "./equtils"
 	"encoding/json"	
+	"fmt"
+	"os"
+	 "io/ioutil"
+	"path/filepath"
 )
+
 
 type libExecution struct {
 	searchDir string
+	experimentCount int 
 }
 
 var (
 	libExe *libExecution
 )
 
+func init() {
+	Log("init() ENTER")
+	libExe = &libExecution{}
+	libExe.searchDir = "/tmp/EQ_UNINITIALIZED_SEARCHDIR"
+	libExe.experimentCount = 0
+	Log("init() LEAVE")
+}
+
 //export EQInitCtx
-func EQInitCtx(configJsonCString *C.char) bool {
+func EQInitCtx(configJsonCString *C.char) int {
 	configJson := C.GoString(configJsonCString)
 	jsonBuf := []byte(configJson)
-	libExe := &libExecution{}
 	var root map[string]interface{}
-	err := json.Unmarshal(jsonBuf, &root)
-	if err != nil {
+	if err := json.Unmarshal(jsonBuf, &root); err != nil {
 		Log("unmarsharing execution file: %s failed (%s)", configJson, err)
-		return false
+		return -1
 	}
 	globalFlags := root["globalFlags"].(map[string]interface{})
 	// direct := int(globalFlags["direct"].(float64))
@@ -48,16 +60,92 @@ func EQInitCtx(configJsonCString *C.char) bool {
 	searchFlags := globalFlags["search"].(map[string]interface{})
 	searchDir := searchFlags["directory"].(string)
 	Log("searchDir: %s", searchDir)
+	if err := os.MkdirAll(searchDir, 0755); err != nil {
+		Log("Mkdir error %s", err)
+		return -1
+	}
 	libExe.searchDir = searchDir
-	return true
+	return 0
 }
 
-//TODO: implement historystorage library
 
 //export EQFreeCtx
-func EQFreeCtx() bool {
-	return true
+func EQFreeCtx() int {
+	return 0
 }
+
+
+
+//export EQRegistExecutionHistory_UnstableAPI
+func EQRegistExecutionHistory_UnstableAPI(shortNameCString *C.char, jsonCString *C.char) int {
+	nameStr := C.GoString(shortNameCString)
+	jsonStr := C.GoString(jsonCString)
+	Log("EQRegistExecutionHistory_UnstableAPI: nameStr=%s", nameStr)
+
+	libExe.experimentCount += 1
+	dirPath := fmt.Sprintf("%s/history/%016d", libExe.searchDir, libExe.experimentCount)
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
+		Log("Mkdir %s error %s", dirPath, err)
+		return -1
+	}
+
+	nameFilePath := fmt.Sprintf("%s/name", dirPath)
+	Log("EQRegistExecutionHistory_UnstableAPI: writing %s", nameFilePath)	
+	if err := ioutil.WriteFile(nameFilePath, []byte(nameStr), 0644); err != nil {
+		Log("WriteFile error %s", err)
+		return -1
+	}
+	Log("EQRegistExecutionHistory_UnstableAPI: wrote %s", nameFilePath)		
+
+	jsonFilePath := fmt.Sprintf("%s/json", dirPath)	
+	Log("EQRegistExecutionHistory_UnstableAPI: writing %s", jsonFilePath)	
+	if err := ioutil.WriteFile(jsonFilePath, []byte(jsonStr), 0644); err != nil {
+		Log("WriteFile error %s", err)
+		return -1
+	}
+	Log("EQRegistExecutionHistory_UnstableAPI: wrote %s", jsonFilePath)		
+	return 0
+}
+
+//export EQGetStatCSV_UnstableAPI
+func EQGetStatCSV_UnstableAPI() *C.char {
+	csvStr := "#exp_count\tpattern_count\n"
+
+	seenNames := make(map[string]bool)
+	nameFiles := fmt.Sprintf("%s/history/*/name", libExe.searchDir)
+	files, err := filepath.Glob(nameFiles)
+	if err != nil {
+		Log("Glob error %s", err)
+		return C.CString("#ERROR")
+	}
+
+	currentExpCount := 0
+	currentPatternCount := 0
+	for _, nameFile := range files {
+		currentExpCount += 1
+		nameBuf, err := ioutil.ReadFile(nameFile)
+		if err != nil {
+			Log("ReadFile error %s", err)
+			return C.CString("#ERROR")			
+		}
+		nameStr := string(nameBuf)
+		Log("loop expCount=%d, nameFile=%s, nameStr=%s, pattenCount=%d", 
+			currentExpCount, nameFile, nameStr, currentPatternCount)
+		if seenNames[nameStr] {
+			Log("nameStr=%s is seen before", nameStr)
+		} else {
+			Log("nameStr=%s is frontier", nameStr)
+			seenNames[nameStr] = true
+			currentPatternCount += 1
+			csvLine := fmt.Sprintf("%d\t%d\n", currentExpCount, currentPatternCount)
+			Log("putting line to csv: %s", csvLine)
+			csvStr += csvLine
+		}
+	}
+	cStr :=  C.CString(csvStr)
+	return cStr
+}
+
 
 
 func main() {

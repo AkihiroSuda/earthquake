@@ -3,6 +3,9 @@
 ## Getting Started
 Prepare
 
+    $ sudo apt-get install -y \
+      python-eventlet python-flask python-colorama python-networkx python-six \
+      default-jdk maven
     $ cp config_example.json config.json
     $ ./000-prepare-zk.sh
     $ ./010-start-orchestrator.sh
@@ -23,4 +26,10 @@ Run experiments
 
 Get experimental result CSV
 
-    $ ..
+    $ curl http://localhost:10000/visualize_api/csv
+    # exp_count	patterns
+    1 1
+    5 2
+    ..
+    
+    

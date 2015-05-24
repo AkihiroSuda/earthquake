@@ -67,7 +67,7 @@ class OrchestratorBase(object):
         LOG.info('Loaded DLL "%s"', self.libearthquake)        
         config_json_str = json.dumps(self.config)
         rc = self.libearthquake.EQInitCtx(config_json_str)
-        assert rc == 1
+        assert rc == 0
 
     def _init_load_process_watcher_plugin(self):
         self.watchers = []
@@ -112,6 +112,14 @@ class OrchestratorBase(object):
         @app.route('/')
         def root():
             return 'Hello Earthquake!'
+
+        @app.route('/visualize_api/csv', methods=['GET'])
+        def visualize_api_csv():
+            csv_fn = self.libearthquake.EQGetStatCSV_UnstableAPI
+            csv_fn.restype = ctypes.c_char_p
+            csv_str = csv_fn()
+            LOG.debug('CSV <== %s', csv_str)
+            return Response(csv_str, mimetype='text/csv')
         
         @app.route('/api/v1', methods=['POST'])
         def api_v1_post():

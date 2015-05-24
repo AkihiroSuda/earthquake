@@ -14,7 +14,7 @@ class DigestibleBase(object):
     """
     digestible pair of <Event, Action>.
     digest is used for recording and comparison of history 
-    (see to_digest_jsondict())
+    (see to_jsondict())
     """
     def __init__(self, event, action):
         assert event.process == action.process
@@ -29,7 +29,7 @@ class DigestibleBase(object):
     def digest_action(self):
         pass
     
-    def to_digest_jsondict(self):
+    def to_jsondict(self):
         """
         makes digest for recording history of executed Pair<Event, Action>.
         digest should NOT include any kind of timestamps, random numbers, UUIDs, or so on.
@@ -42,13 +42,13 @@ class DigestibleBase(object):
         return d
     
     def __repr__(self):
-        return '<Digestible %s>' % repr(self.to_digest_jsondict())
+        return '<Digestible %s>' % repr(self.to_jsondict())
 
     def __str__(self):
         return repr(self)
 
     def __hash__(self):
-        return hash(repr(self.to_digest_jsondict()))
+        return hash(repr(self.to_jsondict()))
 
     def __eq__(self, other):
         return hash(self) == hash(other)

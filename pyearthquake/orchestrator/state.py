@@ -18,7 +18,7 @@ class StateBase(object):
         self.last_transition_time = 0
         
     def __repr__(self):
-        return '<S %s>' % repr(self.digestible_sequence)
+        return '<State %s>' % repr(self.digestible_sequence)
 
     def __str__(self):
         """
@@ -30,7 +30,7 @@ class StateBase(object):
         """
         needed for networkx
         """
-        return hash((self.__class__, tuple(self.digestible_sequence)))
+        return hash((tuple(self.digestible_sequence)))
 
     def __eq__(self, other):
         """
@@ -40,6 +40,17 @@ class StateBase(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def to_short_str(self):
+        return '<State hash=0x%x>' % hash(self)
+
+    def to_jsondict(self):
+        ## NOTE: bare list such as '[{"foo":"foo_value"}, {"bar":"bar_value"} ]' is NOT a legal json string. 
+        ## JQ cannot handle such an illegal json string.
+        return {
+            'type': 'list', 
+            'elements': [d.to_jsondict() for d in self.digestible_sequence]
+        }
 
     def make_copy(self):
         try:
