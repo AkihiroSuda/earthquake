@@ -22,11 +22,11 @@ this will be the first post to our blog..&lt;/p&gt;
     </item>
     
     <item>
-      <title>Usage</title>
-      <link>http://akihirosuda.github.io/earthquake/usage/</link>
+      <title>Getting Started</title>
+      <link>http://akihirosuda.github.io/earthquake/gettingStarted/</link>
       <pubDate>Wed, 22 Jul 2015 14:19:19 +0900</pubDate>
       
-      <guid>http://akihirosuda.github.io/earthquake/usage/</guid>
+      <guid>http://akihirosuda.github.io/earthquake/gettingStarted/</guid>
       <description>&lt;p&gt;&lt;a href=&#34;https://github.com/osrg/earthquake/blob/master/README.md&#34;&gt;README file&lt;/a&gt; is a good start point.&lt;/p&gt;
 </description>
     </item>
@@ -77,6 +77,9 @@ We hope it will make your life a little bit easier.&lt;/p&gt;
 &lt;a href=&#34;https://github.com/osrg/earthquake/pulls&#34;&gt;Pull requests&lt;/a&gt; and &lt;a href=&#34;https://github.com/osrg/earthquake/issues&#34;&gt;issues&lt;/a&gt; are welcome.
 We are using &lt;a href=&#34;https://gitter.im/osrg/earthquake&#34;&gt;gitter&lt;/a&gt; for discussion.
 Feel free to join.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://gitter.im/osrg/earthquake?utm_source=badge&amp;amp;utm_medium=badge&amp;amp;utm_campaign=pr-badge&amp;amp;utm_content=badge&#34;&gt;&lt;img src=&#34;https://badges.gitter.im/Join%20Chat.svg&#34; alt=&#34;Join the chat at https://gitter.im/osrg/earthquake&#34; /&gt;
+&lt;/a&gt;&lt;/p&gt;
 </description>
     </item>
     
@@ -86,7 +89,9 @@ Feel free to join.&lt;/p&gt;
       <pubDate>Wed, 22 Jul 2015 14:18:43 +0900</pubDate>
       
       <guid>http://akihirosuda.github.io/earthquake/about/</guid>
-      <description>&lt;p&gt;In short, the goal of earthquake project is providing a foundation of debugger for distributed systems.&lt;/p&gt;
+      <description>
+
+&lt;p&gt;In short, the goal of earthquake project is providing a foundation of debugger for distributed systems.&lt;/p&gt;
 
 &lt;p&gt;Developing and maintaining distributed systems is difficult.
 The difficulty comes from many factors,
@@ -105,6 +110,8 @@ In addition, they can work with actual implementation (not formal model &lt;a hr
 Its design does not depend on programming languages and opearting systems.
 You can write your own state space search policy for your system.
 We hope it will make your life a little bit easier.&lt;/p&gt;
+
+&lt;h2 id=&#34;references:6083a88ee3411b0d17ce02d738f69d47&#34;&gt;References&lt;/h2&gt;
 
 &lt;ol&gt;
 &lt;li&gt;&lt;a href=&#34;https://www.usenix.org/conference/osdi14/technical-sessions/presentation/leesatapornwongsa&#34; title=&#34;Tanakorn Leesatapornwongsa, et al. SAMC: Semantic-Aware Model Checking for Fast Discovery of Deep Bugs in Cloud Systems. In Proc. of OSDI &#39;14.&#34;&gt;Tanakorn Leesatapornwongsa, et al. SAMC: Semantic-Aware Model Checking for Fast Discovery of Deep Bugs in Cloud Systems. In Proc. of OSDI &amp;lsquo;14.&lt;/a&gt;&lt;/li&gt;
