@@ -2,30 +2,30 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>General on Earthquake</title>
-    <link>http://osrg.github.io/earthquake/categories/general/</link>
+    <link>http://AkihiroSuda.github.io/earthquake/categories/general/</link>
     <description>Recent content in General on Earthquake</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Copyright© 2015 Nippon Telegraph and Telephone Corporation</copyright>
     <lastBuildDate>Wed, 22 Jul 2015 14:19:19 +0900</lastBuildDate>
-    <atom:link href="http://osrg.github.io/earthquake/categories/general/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://AkihiroSuda.github.io/earthquake/categories/general/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Usage</title>
-      <link>http://osrg.github.io/earthquake/usage/</link>
+      <link>http://akihirosuda.github.io/earthquake/usage/</link>
       <pubDate>Wed, 22 Jul 2015 14:19:19 +0900</pubDate>
       
-      <guid>http://osrg.github.io/earthquake/usage/</guid>
+      <guid>http://akihirosuda.github.io/earthquake/usage/</guid>
       <description>&lt;p&gt;&lt;a href=&#34;https://github.com/osrg/earthquake/blob/master/README.md&#34;&gt;README file&lt;/a&gt; is a good start point.&lt;/p&gt;
 </description>
     </item>
     
     <item>
       <title>About Earthquake</title>
-      <link>http://osrg.github.io/earthquake/about/</link>
+      <link>http://akihirosuda.github.io/earthquake/about/</link>
       <pubDate>Wed, 22 Jul 2015 14:18:43 +0900</pubDate>
       
-      <guid>http://osrg.github.io/earthquake/about/</guid>
+      <guid>http://akihirosuda.github.io/earthquake/about/</guid>
       <description>&lt;p&gt;In short, the goal of earthquake project is providing a foundation of debugger for distributed systems.&lt;/p&gt;
 
 &lt;p&gt;Developing and maintaining distributed systems is difficult.
