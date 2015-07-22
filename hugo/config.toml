@@ -1,4 +1,5 @@
-baseurl = "http://osrg.github.io/earthquake/"
+# baseurl = "http://osrg.github.io/earthquake/"
+baseurl = "http://AkihiroSuda.github.io/earthquake/"
 languageCode = "en-us"
 title = "Earthquake"
 theme = "bootie-docs"
